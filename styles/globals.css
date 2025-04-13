@@ -155,3 +155,139 @@
         }
     }
 }
+
+/* Custom styles for the Vibe landing page */
+
+/* Define custom font family */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Pacifico&display=swap');
+
+.font-pacifico {
+    font-family: 'Pacifico', cursive;
+}
+
+/* Define base font and background */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #030303 !important; /* Set base background */
+    color: #e5e7eb !important; /* Default text color (Tailwind gray-200) */
+}
+
+/* --- Animations --- */
+
+/* Keyframes for Shape iniitial entrance animation */
+@keyframes shape-enter {
+    from {
+        opacity: 0;
+        /* Start further away and rotate more */
+        transform: translateY(-200px) rotate(var(--initial-rotate)) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        /* Land in final position */
+        transform: translateY(0) rotate(var(--final-rotate)) scale(1);
+    }
+}
+
+/* Keyframes for Shape floating animation */
+@keyframes shape-float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(15px) rotate(var(--float-rotate, 3deg)); } /* Add subtle rotation */
+}
+
+/* Apply initial animation to Shape container */
+.shape-initial {
+    opacity: 0; /* Start hidden */
+    animation: shape-enter 2.4s cubic-bezier(0.23, 0.86, 0.39, 0.96) forwards;
+    animation-delay: var(--delay);
+    position: absolute; /* Ensure positioning works */
+}
+
+/* Apply floating animation to the inner div of Shape */
+.shape-float-inner {
+    animation: shape-float 12s ease-in-out infinite;
+    position: relative; /* Needed for absolute positioning of the shape itself */
+    width: var(--shape-size, 100px); /* Use CSS variable for size */
+    height: var(--shape-size, 100px);
+}
+
+/* Base style for the actual geometric shape */
+.geometric-shape {
+    position: absolute;
+    inset: 0;
+    /* Base styling - can be overridden */
+    background: var(--shape-gradient, linear-gradient(to right, rgba(139, 92, 246, 0.15), transparent)); /* Default gradient */
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Slightly thinner border */
+    box-shadow: 0 4px 20px 0 rgba(255, 255, 255, 0.08); /* Softer shadow */
+}
+
+/* Add a subtle inner glow */
+.geometric-shape::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit; /* Match parent's border-radius */
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.15), transparent 70%);
+}
+
+/* Specific shape styles */
+.shape-circle {
+    border-radius: 50%;
+}
+.shape-square {
+    border-radius: 10%; /* Slightly rounded square */
+}
+
+/* Keyframes for fade-up animation (Content) */
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Class to apply fade-up animation */
+.fade-up-element {
+    opacity: 0; /* Start hidden */
+    animation: fade-up 1s cubic-bezier(0.25, 0.4, 0.25, 1) forwards;
+    animation-delay: var(--delay, 0s); /* Default delay 0s */
+}
+
+/* --- Utility Styles --- */
+
+/* Custom styles for input focus */
+.custom-input:focus-visible {
+    outline: none;
+    box-shadow: none;
+    border-color: transparent;
+    --tw-ring-offset-shadow: none; /* Equivalent of ring-offset-0 */
+    --tw-ring-shadow: none; /* Equivalent of ring-0 */
+    box-shadow: none;
+}
+
+/* Helper for gradient text */
+.bg-clip-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+.text-transparent {
+    color: transparent;
+}
+
+/* Style for blog cards */
+.blog-card {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.blog-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Style for social icons */
+.social-icon {
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+.social-icon:hover {
+    transform: scale(1.1);
+    color: #a78bfa; /* Tailwind violet-400 */
+}
