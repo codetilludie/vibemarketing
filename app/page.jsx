@@ -1,37 +1,100 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Checkbox from '../components/Checkbox';
 
 export default function Home() {
-  // Newsletter Form Logic
+  // State to track if component is mounted (client-side only)
+  const [isMounted, setIsMounted] = useState(false);
+  // State to control confirmation popup visibility
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  // State for consent checkbox
+  const [consentChecked, setConsentChecked] = useState(false);
+  // State for validation error
+  const [validationError, setValidationError] = useState(false);
+  
+  // Mark component as mounted on client side
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Newsletter Form Logic - only runs after component is mounted
+  useEffect(() => {
+    if (!isMounted) return;
+    
     const form = document.getElementById('newsletter-form');
     const emailInput = document.getElementById('email-input');
     const submitButton = document.getElementById('submit-button');
     const buttonText = document.getElementById('button-text');
     const buttonSuccess = document.getElementById('button-success');
+    const consentCheckbox = document.getElementById('consent-checkbox');
 
     if (form && emailInput && submitButton && buttonText && buttonSuccess) {
       const handleSubmit = (e) => {
-        e.preventDefault(); // Prevent actual form submission
-
-        if (form.checkValidity()) { // Basic HTML5 validation
+        e.preventDefault(); // Prevent default form submission
+        
+        // Hide any existing validation error when trying to submit again
+        setValidationError(false);
+        
+        // Check if either email is empty or consent is not checked
+        if (!emailInput.value || !consentChecked) {
+          setValidationError(true);
+          
+          // Automatically hide the error message after 2 seconds
+          setTimeout(() => {
+            setValidationError(false);
+          }, 2000);
+          
+          return;
+        }
+        
+        // Check both email validity and consent checkbox
+        if (form.checkValidity() && consentChecked) { 
           // Disable button and show success state
           submitButton.disabled = true;
           buttonText.classList.add('hidden');
           buttonSuccess.classList.remove('hidden');
           buttonSuccess.classList.add('flex'); // Make sure flex is applied
 
-          // Simulate sending data (replace with actual API call if needed)
-          console.log('Subscribing email:', emailInput.value);
-
-          // Reset form after 3 seconds
-          setTimeout(() => {
-            emailInput.value = ''; // Clear input
+          // Submit the form data to Mailchimp
+          const formData = new FormData(form);
+          const url = form.getAttribute('action');
+          
+          fetch(url, {
+            method: 'POST',
+            mode: 'no-cors', // Important for cross-origin requests to Mailchimp
+            body: new URLSearchParams(formData).toString(),
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          })
+          .then(() => {
+            console.log('Subscription request sent to Mailchimp');
+            
+            // Show confirmation popup
+            setShowConfirmation(true);
+            
+            // Reset form after 3 seconds
+            setTimeout(() => {
+              emailInput.value = ''; // Clear input
+              setConsentChecked(false); // Reset checkbox
+              submitButton.disabled = false;
+              buttonText.classList.remove('hidden');
+              buttonSuccess.classList.add('hidden');
+              buttonSuccess.classList.remove('flex');
+            }, 3000);
+            
+            // Hide confirmation after 8 seconds
+            setTimeout(() => {
+              setShowConfirmation(false);
+            }, 8000);
+          })
+          .catch(error => {
+            console.error('Mailchimp subscription error:', error);
+            // Reset button state
             submitButton.disabled = false;
             buttonText.classList.remove('hidden');
             buttonSuccess.classList.add('hidden');
-            buttonSuccess.classList.remove('flex');
-          }, 3000);
+          });
         }
       };
 
@@ -42,10 +105,37 @@ export default function Home() {
         form.removeEventListener('submit', handleSubmit);
       };
     }
-  }, []);
+  }, [isMounted, consentChecked]);
+
+  // Handle checkbox change
+  const handleCheckboxChange = (e) => {
+    setConsentChecked(e.target.checked);
+  };
   
   return (
     <>
+      {/* Confirmation Popup */}
+      {showConfirmation && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-indigo-500 to-rose-500 text-white px-6 py-4 rounded-lg shadow-lg animate-fade-in-down">
+          <div className="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <p className="font-medium">Danke für die Anmeldung. Vergiss nicht deine E-Mail zu bestätigen</p>
+            <button 
+              onClick={() => setShowConfirmation(false)}
+              className="ml-2 text-white/80 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl"></div>
 
@@ -146,11 +236,20 @@ export default function Home() {
 
             <div className="fade-up-element" style={{'--delay': '1.1s'}}>
               <div className="max-w-md mx-auto">
-                <form id="newsletter-form" className="relative">
+                <form 
+                  id="newsletter-form" 
+                  className="relative"
+                  action="https://gmail.us15.list-manage.com/subscribe/post?u=a945b4d94fa5909097fd8ff13&amp;id=a2bc85e090&amp;f_id=00c5c2e1f0"
+                  method="post"
+                  name="mc-embedded-subscribe-form"
+                  target="_self"
+                  noValidate
+                >
                   <div className="flex gap-2 p-1.5 rounded-full bg-white/[0.03] border border-white/[0.08]">
                     <input
                       type="email"
                       id="email-input"
+                      name="EMAIL"
                       placeholder="Enter your email"
                       required
                       className="custom-input flex-grow bg-transparent border-0 text-white/80 placeholder:text-white/30 px-4 py-2 focus:ring-0 focus:outline-none"
@@ -158,6 +257,7 @@ export default function Home() {
                     <button
                       type="submit"
                       id="submit-button"
+                      name="subscribe"
                       className="rounded-full px-4 py-2 bg-gradient-to-r from-indigo-500 to-rose-500 hover:from-indigo-600 hover:to-rose-600 text-white transition-all duration-300 ease-in-out disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                       <span id="button-text">Subscribe</span>
@@ -167,8 +267,42 @@ export default function Home() {
                       </span>
                     </button>
                   </div>
+                  
+                  {/* Validation Error Message */}
+                  {validationError && (
+                    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-rose-500 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
+                      Zustimmung fehlt
+                    </div>
+                  )}
+                  
+                  {/* Consent Checkbox */}
+                  <div className="mt-4 flex items-start gap-3">
+                    <div className="mt-0.5">
+                      <Checkbox 
+                        id="consent-checkbox" 
+                        checked={consentChecked} 
+                        onChange={handleCheckboxChange}
+                        required={true}
+                      />
+                    </div>
+                    <label htmlFor="consent-checkbox" className="text-xs text-white/50 cursor-pointer">
+                      Ich stimme zu, dass meine Daten für werbliche E-Mails und Analysen genutzt werden können. Diese Einwilligung kann jederzeit wiederrufen werden.
+                    </label>
+                  </div>
+                  
                   <div className="mt-2 text-xs text-white/30 text-center">
                     Nur für innovative Marketer. Kein Grundlagen-Content. Jederzeit abbestellbar.
+                  </div>
+                  {/* Hidden fields required by Mailchimp */}
+                  <div hidden>
+                    <input type="hidden" name="tags" value="152" />
+                  </div>
+                  <div aria-hidden="true" style={{ position: 'absolute', left: '-5000px' }}>
+                    <input type="text" name="b_a945b4d94fa5909097fd8ff13_a2bc85e090" tabIndex="-1" defaultValue="" />
+                  </div>
+                  <div id="mce-responses" className="clear" style={{ display: 'none' }}>
+                    <div className="response" id="mce-error-response" style={{ display: 'none' }}></div>
+                    <div className="response" id="mce-success-response" style={{ display: 'none' }}></div>
                   </div>
                 </form>
               </div>
