@@ -1,4 +1,13 @@
 import '../styles/globals.css';
+import { Pacifico } from 'next/font/google';
+
+// Initialize the Pacifico font
+const pacifico = Pacifico({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-pacifico',
+});
 
 export const metadata = {
     title: {
@@ -12,7 +21,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="en">
+        <html lang="en" className={`${pacifico.variable}`}>
             <body className="antialiased text-white bg-[#030303]">
                 <div className="flex flex-col min-h-screen">
                     <main className="grow">{children}</main>

@@ -158,13 +158,17 @@
 
 /* Custom styles for the Vibe landing page */
 
-/* Define custom font family - removed Google Fonts import */
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Pacifico&display=swap'); */
+/* Define custom font family - font is now loaded properly via next/font in layout.jsx */
 
 .font-pacifico {
-    /* Use cursive system fonts that have similar style to Pacifico */
-    font-family: cursive, 'Brush Script MT', 'Comic Sans MS', sans-serif;
-    font-style: italic;
+    /* Use the CSS variable from the properly loaded Google Font */
+    font-family: var(--font-pacifico, 'Pacifico', 'Segoe Script', 'Brush Script MT', cursive);
+    font-style: normal;
+    font-weight: 400;
+    /* Additional properties for consistent rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 /* Define base font and background */
