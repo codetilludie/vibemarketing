@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Checkbox from '../components/Checkbox';
+import Navbar from '../components/navbar';
 
 export default function Home() {
   // State to track if component is mounted (client-side only)
@@ -135,6 +136,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Add Navbar component */}
+      <Navbar />
 
       <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl"></div>

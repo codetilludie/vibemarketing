@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export default function Strategie() {
   // State to track if component is mounted (client-side only)
@@ -9,17 +10,85 @@ export default function Strategie() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Function to generate a unique ID (with fallback)
+  const generateUniqueId = () => {
+    try {
+      return crypto.randomUUID();
+    } catch (error) {
+      // Fallback method if randomUUID is not available
+      return `id-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    }
+  };
+
   // Mark component as mounted on client side
   useEffect(() => {
     setIsMounted(true);
-    // Add welcome message
-    setMessages([
-      {
-        role: 'assistant',
-        content: 'Willkommen! Ich bin dein Strategie-Assistent. Wie kann ich dir heute helfen?'
-      }
-    ]);
+    
+    // Check for existing session or create a new one
+    let existingSessionId = localStorage.getItem('chatSessionId');
+    
+    if (!existingSessionId) {
+      // Generate a new session ID
+      existingSessionId = generateUniqueId();
+      localStorage.setItem('chatSessionId', existingSessionId);
+      
+      // Add welcome message for new session
+      setMessages([
+        {
+          role: 'assistant',
+          content: 'Willkommen! Ich bin dein Strategie-Assistent. Wie kann ich dir heute helfen?'
+        }
+      ]);
+    } else {
+      // Load previous session
+      loadPreviousSession(existingSessionId);
+    }
   }, []);
+
+  // Function to load previous session
+  const loadPreviousSession = async (sessionId) => {
+    setIsLoading(true);
+    try { 
+      const response = await fetch(`https://skillcamp.app.n8n.cloud/webhook/chat`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'loadPreviousSession',
+          sessionId: sessionId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load previous session');
+      }
+
+      const data = await response.json();
+      
+      if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+        setMessages(data.messages);
+      } else {
+        // If no messages found, show welcome message
+        setMessages([
+          {
+            role: 'assistant',
+            content: 'Willkommen zurück! Wie kann ich dir heute helfen?'
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading previous session:', error);
+      setMessages([
+        {
+          role: 'assistant',
+          content: 'Willkommen! Ich bin dein Strategie-Assistent. Wie kann ich dir heute helfen?'
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -42,13 +111,17 @@ export default function Strategie() {
     setIsLoading(true);
 
     try {
-      // Call your n8n workflow endpoint
-      const response = await fetch('https://n8n.vibe.ai/webhook/strategie-agent', {
+      // Call the n8n Chat webhook with the proper action and parameters
+      const response = await fetch(`https://skillcamp.app.n8n.cloud/webhook/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: userMessage.content }),
+        body: JSON.stringify({
+          action: 'sendMessage',
+          chatInput: userMessage.content,
+          sessionId: localStorage.getItem('chatSessionId') || generateUniqueId()
+        }),
       });
 
       if (!response.ok) {
@@ -56,22 +129,45 @@ export default function Strategie() {
       }
 
       const data = await response.json();
+      
+      // Store the session ID for future messages
+      if (data.sessionId) {
+        localStorage.setItem('chatSessionId', data.sessionId);
+      }
 
       // Add assistant response to chat
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.message || 'Es tut mir leid, ich konnte keine Antwort generieren.'
+        content: data.output || data.response || data.text || 
+                (typeof data === 'string' ? data : JSON.stringify(data)) || 
+                'Es tut mir leid, ich konnte keine Antwort generieren.'
       }]);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error connecting to n8n agent:', error);
+      
       // Add error message to chat
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Es tut mir leid, es gab einen Fehler bei der Verarbeitung deiner Anfrage.'
+        content: 'Es tut mir leid, es gab einen Fehler bei der Verbindung zum n8n-Agent. Bitte versuche es später noch einmal.'
       }]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Function to start a new chat session
+  const startNewChat = () => {
+    // Generate a new session ID
+    const newSessionId = generateUniqueId();
+    localStorage.setItem('chatSessionId', newSessionId);
+    
+    // Reset messages
+    setMessages([
+      {
+        role: 'assistant',
+        content: 'Neue Konversation gestartet! Wie kann ich dir heute helfen?'
+      }
+    ]);
   };
 
   return (
@@ -144,6 +240,17 @@ export default function Strategie() {
 
           <div className="fade-up-element" style={{'--delay': '0.9s'}}>
             <div className="max-w-2xl mx-auto bg-white/[0.03] border border-white/[0.08] rounded-xl overflow-hidden">
+              {/* Header with new chat button */}
+              <div className="border-b border-white/[0.08] p-3 flex justify-between items-center">
+                <div className="text-white/80 font-medium">Chat</div>
+                <button 
+                  onClick={startNewChat}
+                  className="text-sm text-white/60 hover:text-white transition-colors px-2 py-1 rounded-md hover:bg-white/[0.05]"
+                >
+                  Neue Konversation
+                </button>
+              </div>
+              
               {/* Chat messages container */}
               <div className="h-[400px] overflow-y-auto p-4 flex flex-col space-y-4">
                 {messages.map((message, index) => (
@@ -158,7 +265,25 @@ export default function Strategie() {
                           : 'bg-white/[0.07] text-white/90'
                       }`}
                     >
-                      {message.content}
+                      <ReactMarkdown
+                        components={{
+                          // Customize styling for different markdown elements
+                          h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-2" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-1" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-md font-bold mb-1" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+                          li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                          p: ({node, ...props}) => <p className="mb-2" {...props} />,
+                          a: ({node, ...props}) => <a className="text-indigo-300 underline" {...props} />,
+                          code: ({node, inline, ...props}) => 
+                            inline 
+                              ? <code className="bg-black/20 px-1 rounded" {...props} />
+                              : <code className="block bg-black/20 p-2 rounded my-2 overflow-x-auto" {...props} />
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 ))}
